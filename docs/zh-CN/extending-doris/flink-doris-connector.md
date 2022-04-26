@@ -42,13 +42,58 @@ Flink Doris Connector 可以支持通过 Flink 操作（读取、插入、修改
 ## 版本兼容
 
 | Connector | Flink | Doris  | Java | Scala |
-| --------- | ----- | ------ | ---- | ----- |
-| 1.11.6-2.12-xx | 1.11.x | 0.13+  | 8    | 2.12  |
+| --------- | ----- | ------ | ---- |------|
+| 1.11.6-2.12-xx | 1.11.x | 0.13+  | 8    | 2.12 |
 | 1.12.7-2.12-xx | 1.12.x | 0.13.+ | 8 | 2.12 |
 | 1.13.5-2.12-xx | 1.13.x | 0.13.+ | 8 | 2.12 |
 | 1.14.4-2.12-xx | 1.14.x | 0.13.+ | 8 | 2.12 |
 
 ## 编译与安装
+
+准备工作
+
+1.修改`custom_env.sh.tpl`文件，重命名为`custom_env.sh`
+
+2.指定thrift安装目录
+
+```bash
+##源文件内容
+#export THRIFT_BIN=
+#export MVN_BIN=
+#export JAVA_HOME=
+
+##修改如下,MacOS为例
+export THRIFT_BIN=/opt/homebrew/Cellar/thrift@0.13.0/0.13.0/bin/thrift
+#export MVN_BIN=
+#export JAVA_HOME=
+
+安装 `thrift` 0.13.0 版本(注意：`Doris` 0.15 和最新的版本基于 `thrift` 0.13.0 构建, 之前的版本依然使用`thrift` 0.9.3 构建)
+ Windows: 
+    1.下载：`http://archive.apache.org/dist/thrift/0.13.0/thrift-0.13.0.exe`(下载目录自己指定)
+    2.修改thrift-0.13.0.exe 为 thrift
+ 
+ MacOS: 
+    1. 下载：`brew install thrift@0.13.0`
+    2. 默认下载地址：/opt/homebrew/Cellar/thrift@0.13.0/0.13.0/bin/thrift
+    
+ 
+ 注：MacOS执行 `brew install thrift@0.13.0` 可能会报找不到版本的错误，解决方法如下，在终端执行：
+    1. `brew tap-new $USER/local-tap`
+    2. `brew extract --version='0.13.0' thrift $USER/local-tap`
+    3. `brew install thrift@0.13.0`
+ 参考链接: `https://gist.github.com/tonydeng/02e571f273d6cce4230dc8d5f394493c`
+ 
+ Linux:
+    1.下载源码包：`wget https://archive.apache.org/dist/thrift/0.13.0/thrift-0.13.0.tar.gz`
+    2.安装依赖：`yum install -y autoconf automake libtool cmake ncurses-devel openssl-devel lzo-devel zlib-devel gcc gcc-c++`
+    3.`tar zxvf thrift-0.13.0.tar.gz`
+    4.`cd thrift-0.13.0`
+    5.`./configure --without-tests`
+    6.`make`
+    7.`make install`
+   安装完成后查看版本：thrift --version  
+   注：如果编译过Doris，则不需要安装thrift,可以直接使用 $DORIS_HOME/thirdparty/installed/bin/thrift
+```
 
 在源码目录下执行：
 
@@ -73,7 +118,7 @@ sh build.sh --flink 1.14.3 --scala 2.12
 **备注**
 
 1. Doris FE 要在配置中配置启用 http v2
-2. Scala 版本目前只支持 2.12.x 版本
+2. Scala 版本目前支持2.12和2.11
 
 conf/fe.conf
 
@@ -132,7 +177,7 @@ Flink 1.13.* 及以前的版本
   <!--artifactId>flink-doris-connector-1.11_2.12</artifactId-->
   <version>1.0.3</version>
 </dependency>    
-``` 
+```
 Flink 1.14.* 版本
 ```
 <dependency>
@@ -166,11 +211,12 @@ Flink 1.14.* 版本
   <artifactId>flink-doris-connector-1.14_2.12</artifactId>
   <version>1.0.3</version>
 </dependency>  
-``` 
+```
 
 **备注**
 
-请根据不同的 Flink 和 Scala 版本替换对应的 Connector 和 Flink 依赖版本。
+1.请根据不同的 Flink 和 Scala 版本替换对应的 Connector 和 Flink 依赖版本。
+2.目前maven中仅提供了scala2.12版本的包，2.11版本的包需要自行编译，参考上面编译安装小节。
 
 ## 使用方法
 

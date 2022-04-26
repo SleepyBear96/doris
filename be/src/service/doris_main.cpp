@@ -357,14 +357,9 @@ int main(int argc, char** argv) {
     }
 #endif
 
-    if (!doris::Env::init()) {
-        LOG(FATAL) << "init env failed.";
-        exit(-1);
-    }
-
     std::vector<doris::StorePath> paths;
     auto olap_res = doris::parse_conf_store_paths(doris::config::storage_root_path, &paths);
-    if (olap_res != doris::OLAP_SUCCESS) {
+    if (!olap_res) {
         LOG(FATAL) << "parse config storage path failed, path=" << doris::config::storage_root_path;
         exit(-1);
     }

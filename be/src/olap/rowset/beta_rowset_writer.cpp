@@ -33,6 +33,8 @@
 #include "olap/rowset/segment_v2/segment_writer.h"
 #include "olap/storage_engine.h"
 #include "runtime/exec_env.h"
+#include "util/storage_backend.h"
+#include "util/storage_backend_mgr.h"
 
 namespace doris {
 
@@ -53,20 +55,29 @@ BetaRowsetWriter::~BetaRowsetWriter() {
     if (!_already_built) {       // abnormal exit, remove all files generated
         _segment_writer.reset(); // ensure all files are closed
         Status st;
-        Env* env = Env::get_env(_context.path_desc.storage_medium);
+        if (_context.path_desc.is_remote()) {
+            std::shared_ptr<StorageBackend> storage_backend = StorageBackendMgr::instance()->
+                    get_storage_backend(_context.path_desc.storage_name);
+            if (storage_backend == nullptr) {
+                LOG(WARNING) << "storage_backend is invalid: " << _context.path_desc.debug_string();
+                return;
+            }
+            WARN_IF_ERROR(storage_backend->rmdir(_context.path_desc.remote_path),
+                    strings::Substitute("Failed to delete remote file=$0", _context.path_desc.remote_path));
+        }
         for (int i = 0; i < _num_segment; ++i) {
             auto path_desc = BetaRowset::segment_file_path(_context.path_desc,
                                                       _context.rowset_id, i);
             // Even if an error is encountered, these files that have not been cleaned up
             // will be cleaned up by the GC background. So here we only print the error
             // message when we encounter an error.
-            WARN_IF_ERROR(env->delete_file(path_desc.filepath),
+            WARN_IF_ERROR(Env::Default()->delete_file(path_desc.filepath),
                           strings::Substitute("Failed to delete file=$0", path_desc.filepath));
         }
     }
 }
 
-OLAPStatus BetaRowsetWriter::init(const RowsetWriterContext& rowset_writer_context) {
+Status BetaRowsetWriter::init(const RowsetWriterContext& rowset_writer_context) {
     _context = rowset_writer_context;
     _rowset_meta.reset(new RowsetMeta);
     _rowset_meta->set_rowset_id(_context.rowset_id);
@@ -85,11 +96,11 @@ OLAPStatus BetaRowsetWriter::init(const RowsetWriterContext& rowset_writer_conte
     }
     _rowset_meta->set_tablet_uid(_context.tablet_uid);
 
-    return OLAP_SUCCESS;
+    return Status::OK();
 }
 
 template <typename RowType>
-OLAPStatus BetaRowsetWriter::_add_row(const RowType& row) {
+Status BetaRowsetWriter::_add_row(const RowType& row) {
     if (PREDICT_FALSE(_segment_writer == nullptr)) {
         RETURN_NOT_OK(_create_segment_writer(&_segment_writer));
     }
@@ -97,20 +108,20 @@ OLAPStatus BetaRowsetWriter::_add_row(const RowType& row) {
     auto s = _segment_writer->append_row(row);
     if (PREDICT_FALSE(!s.ok())) {
         LOG(WARNING) << "failed to append row: " << s.to_string();
-        return OLAP_ERR_WRITER_DATA_WRITE_ERROR;
+        return Status::OLAPInternalError(OLAP_ERR_WRITER_DATA_WRITE_ERROR);
     }
     if (PREDICT_FALSE(_segment_writer->estimate_segment_size() >= MAX_SEGMENT_SIZE ||
                       _segment_writer->num_rows_written() >= _context.max_rows_per_segment)) {
         RETURN_NOT_OK(_flush_segment_writer(&_segment_writer));
     }
     ++_num_rows_written;
-    return OLAP_SUCCESS;
+    return Status::OK();
 }
 
-template OLAPStatus BetaRowsetWriter::_add_row(const RowCursor& row);
-template OLAPStatus BetaRowsetWriter::_add_row(const ContiguousRow& row);
+template Status BetaRowsetWriter::_add_row(const RowCursor& row);
+template Status BetaRowsetWriter::_add_row(const ContiguousRow& row);
 
-OLAPStatus BetaRowsetWriter::add_rowset(RowsetSharedPtr rowset) {
+Status BetaRowsetWriter::add_rowset(RowsetSharedPtr rowset) {
     assert(rowset->rowset_meta()->rowset_type() == BETA_ROWSET);
     RETURN_NOT_OK(rowset->link_files_to(_context.path_desc, _context.rowset_id));
     _num_rows_written += rowset->num_rows();
@@ -121,23 +132,57 @@ OLAPStatus BetaRowsetWriter::add_rowset(RowsetSharedPtr rowset) {
     if (rowset->rowset_meta()->has_delete_predicate()) {
         _rowset_meta->set_delete_predicate(rowset->rowset_meta()->delete_predicate());
     }
-    return OLAP_SUCCESS;
+    return Status::OK();
 }
 
-OLAPStatus BetaRowsetWriter::add_rowset_for_linked_schema_change(
+Status BetaRowsetWriter::add_rowset_for_linked_schema_change(
         RowsetSharedPtr rowset, const SchemaMapping& schema_mapping) {
     // TODO use schema_mapping to transfer zonemap
     return add_rowset(rowset);
 }
 
-OLAPStatus BetaRowsetWriter::flush() {
+Status BetaRowsetWriter::add_rowset_for_migration(RowsetSharedPtr rowset) {
+    Status res = Status::OK();
+    assert(rowset->rowset_meta()->rowset_type() == BETA_ROWSET);
+    if (!rowset->rowset_path_desc().is_remote() && !_context.path_desc.is_remote()) {
+        res = rowset->copy_files_to(_context.path_desc.filepath, _context.rowset_id);
+        if (!res.ok()) {
+            LOG(WARNING) << "copy_files failed. src: " << rowset->rowset_path_desc().filepath
+                         << ", dest: " << _context.path_desc.filepath;
+            return res;
+        }
+    } else if (!rowset->rowset_path_desc().is_remote() && _context.path_desc.is_remote()) {
+        res = rowset->upload_files_to(_context.path_desc, _context.rowset_id);
+        if (!res.ok()) {
+            LOG(WARNING) << "upload_files failed. src: " << rowset->rowset_path_desc().debug_string()
+                         << ", dest: " << _context.path_desc.debug_string();
+            return res;
+        }
+    } else {
+        LOG(WARNING) << "add_rowset_for_migration failed. storage_medium is invalid. src: "
+                << rowset->rowset_path_desc().debug_string() << ", dest: " << _context.path_desc.debug_string();
+        return Status::OLAPInternalError(OLAP_ERR_ROWSET_ADD_MIGRATION_V2);
+    }
+
+    _num_rows_written += rowset->num_rows();
+    _total_data_size += rowset->rowset_meta()->data_disk_size();
+    _total_index_size += rowset->rowset_meta()->index_disk_size();
+    _num_segment += rowset->num_segments();
+    // TODO update zonemap
+    if (rowset->rowset_meta()->has_delete_predicate()) {
+        _rowset_meta->set_delete_predicate(rowset->rowset_meta()->delete_predicate());
+    }
+    return Status::OK();
+}
+
+Status BetaRowsetWriter::flush() {
     if (_segment_writer != nullptr) {
         RETURN_NOT_OK(_flush_segment_writer(&_segment_writer));
     }
-    return OLAP_SUCCESS;
+    return Status::OK();
 }
 
-OLAPStatus BetaRowsetWriter::flush_single_memtable(MemTable* memtable, int64_t* flush_size) {
+Status BetaRowsetWriter::flush_single_memtable(MemTable* memtable, int64_t* flush_size) {
     int64_t current_flush_size = _total_data_size + _total_index_size;
     // Create segment writer for each memtable, so that
     // all memtables can be flushed in parallel.
@@ -152,7 +197,7 @@ OLAPStatus BetaRowsetWriter::flush_single_memtable(MemTable* memtable, int64_t* 
         auto s = writer->append_row(dst_row);
         if (PREDICT_FALSE(!s.ok())) {
             LOG(WARNING) << "failed to append row: " << s.to_string();
-            return OLAP_ERR_WRITER_DATA_WRITE_ERROR;
+            return Status::OLAPInternalError(OLAP_ERR_WRITER_DATA_WRITE_ERROR);
         }
 
         if (PREDICT_FALSE(writer->estimate_segment_size() >= MAX_SEGMENT_SIZE ||
@@ -167,7 +212,7 @@ OLAPStatus BetaRowsetWriter::flush_single_memtable(MemTable* memtable, int64_t* 
     }
 
     *flush_size = (_total_data_size + _total_index_size) - current_flush_size;
-    return OLAP_SUCCESS;
+    return Status::OK();
 }
 
 RowsetSharedPtr BetaRowsetWriter::build() {
@@ -198,7 +243,7 @@ RowsetSharedPtr BetaRowsetWriter::build() {
     RowsetSharedPtr rowset;
     auto status = RowsetFactory::create_rowset(_context.tablet_schema, _context.path_desc,
                                                _rowset_meta, &rowset);
-    if (status != OLAP_SUCCESS) {
+    if (!status.ok()) {
         LOG(WARNING) << "rowset init failed when build new rowset, res=" << status;
         return nullptr;
     }
@@ -206,12 +251,12 @@ RowsetSharedPtr BetaRowsetWriter::build() {
     return rowset;
 }
 
-OLAPStatus BetaRowsetWriter::_create_segment_writer(std::unique_ptr<segment_v2::SegmentWriter>* writer) {
+Status BetaRowsetWriter::_create_segment_writer(std::unique_ptr<segment_v2::SegmentWriter>* writer) {
     auto path_desc = BetaRowset::segment_file_path(_context.path_desc, _context.rowset_id,
                                               _num_segment++);
     // TODO(lingbin): should use a more general way to get BlockManager object
     // and tablets with the same type should share one BlockManager object;
-    fs::BlockManager* block_mgr = fs::fs_util::block_manager(_context.path_desc.storage_medium);
+    fs::BlockManager* block_mgr = fs::fs_util::block_manager(_context.path_desc);
     std::unique_ptr<fs::WritableBlock> wblock;
     fs::CreateBlockOptions opts(path_desc);
     DCHECK(block_mgr != nullptr);
@@ -219,13 +264,13 @@ OLAPStatus BetaRowsetWriter::_create_segment_writer(std::unique_ptr<segment_v2::
     if (!st.ok()) {
         LOG(WARNING) << "failed to create writable block. path=" << path_desc.filepath 
                      << ", err: " << st.get_error_msg();
-        return OLAP_ERR_INIT_FAILED;
+        return Status::OLAPInternalError(OLAP_ERR_INIT_FAILED);
     }
 
     DCHECK(wblock != nullptr);
     segment_v2::SegmentWriterOptions writer_options;
     writer->reset(new segment_v2::SegmentWriter(wblock.get(), _num_segment, _context.tablet_schema,
-                                                writer_options));
+                                                _context.data_dir, writer_options));
     {
         std::lock_guard<SpinLock> l(_lock);
         _wblocks.push_back(std::move(wblock));
@@ -235,23 +280,23 @@ OLAPStatus BetaRowsetWriter::_create_segment_writer(std::unique_ptr<segment_v2::
     if (!s.ok()) {
         LOG(WARNING) << "failed to init segment writer: " << s.to_string();
         writer->reset(nullptr);
-        return OLAP_ERR_INIT_FAILED;
+        return Status::OLAPInternalError(OLAP_ERR_INIT_FAILED);
     }
-    return OLAP_SUCCESS;
+    return Status::OK();
 }
 
-OLAPStatus BetaRowsetWriter::_flush_segment_writer(std::unique_ptr<segment_v2::SegmentWriter>* writer) {
+Status BetaRowsetWriter::_flush_segment_writer(std::unique_ptr<segment_v2::SegmentWriter>* writer) {
     uint64_t segment_size;
     uint64_t index_size;
     Status s = (*writer)->finalize(&segment_size, &index_size);
     if (!s.ok()) {
         LOG(WARNING) << "failed to finalize segment: " << s.to_string();
-        return OLAP_ERR_WRITER_DATA_WRITE_ERROR;
+        return Status::OLAPInternalError(OLAP_ERR_WRITER_DATA_WRITE_ERROR);
     }
     _total_data_size += segment_size;
     _total_index_size += index_size;
     writer->reset();
-    return OLAP_SUCCESS;
+    return Status::OK();
 }
 
 } // namespace doris

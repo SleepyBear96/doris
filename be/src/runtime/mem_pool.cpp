@@ -14,6 +14,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+// This file is copied from
+// https://github.com/apache/impala/blob/branch-2.9.0/be/src/runtime/mem-pool.cc
+// and modified by Doris
 
 #include "runtime/mem_pool.h"
 
@@ -193,7 +196,7 @@ void MemPool::acquire_data(MemPool* src, bool keep_current) {
     }
 
     // insert new chunks after current_chunk_idx_
-    auto insert_chunk = chunks_.begin() + current_chunk_idx_ + 1;
+    auto insert_chunk = chunks_.begin() + (current_chunk_idx_ + 1);
     chunks_.insert(insert_chunk, src->chunks_.begin(), end_chunk);
     src->chunks_.erase(src->chunks_.begin(), end_chunk);
     current_chunk_idx_ += num_acquired_chunks;

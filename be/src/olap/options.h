@@ -35,13 +35,12 @@ struct StorePath {
     std::string path;
     int64_t capacity_bytes;
     TStorageMedium::type storage_medium;
-    std::string remote_path;
 };
 
 // parse a single root path of storage_root_path
-OLAPStatus parse_root_path(const std::string& root_path, StorePath* path);
+Status parse_root_path(const std::string& root_path, StorePath* path);
 
-OLAPStatus parse_conf_store_paths(const std::string& config_path, std::vector<StorePath>* path);
+Status parse_conf_store_paths(const std::string& config_path, std::vector<StorePath>* path);
 
 struct EngineOptions {
     // list paths that tablet will be put into.
