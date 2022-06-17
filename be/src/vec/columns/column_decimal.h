@@ -21,14 +21,15 @@
 #pragma once
 
 #include <cmath>
+#include <type_traits>
 
+#include "olap/decimal12.h"
 #include "vec/columns/column.h"
 #include "vec/columns/column_impl.h"
 #include "vec/columns/column_vector_helper.h"
 #include "vec/common/assert_cast.h"
 #include "vec/common/typeid_cast.h"
 #include "vec/core/field.h"
-#include "olap/decimal12.h"
 
 namespace doris::vectorized {
 
@@ -71,6 +72,7 @@ private:
     friend class COWHelper<ColumnVectorHelper, Self>;
 
 public:
+    using value_type = T;
     using Container = DecimalPaddedPODArray<T>;
 
 private:
@@ -203,6 +205,8 @@ public:
         data[self_row] = T();
     }
 
+    UInt32 get_scale() const { return scale; }
+
 protected:
     Container data;
     UInt32 scale;
@@ -224,6 +228,22 @@ protected:
                               [this](size_t a, size_t b) { return data[a] < data[b]; });
     }
 };
+
+template <typename>
+class ColumnVector;
+
+template <typename T, bool is_decimal = false>
+struct ColumnVectorOrDecimalT {
+    using Col = ColumnVector<T>;
+};
+
+template <typename T>
+struct ColumnVectorOrDecimalT<T, true> {
+    using Col = ColumnDecimal<T>;
+};
+
+template <typename T>
+using ColumnVectorOrDecimal = typename ColumnVectorOrDecimalT<T, IsDecimalNumber<T>>::Col;
 
 template <typename T>
 template <typename Type>

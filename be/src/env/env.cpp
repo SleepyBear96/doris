@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common/config.h"
 #include "env/env.h"
+
 #include "env/env_posix.h"
 
 namespace doris {

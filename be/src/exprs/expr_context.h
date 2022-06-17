@@ -18,8 +18,7 @@
 // https://github.com/apache/impala/blob/branch-2.9.0/be/src/exprs/expr-context.h
 // and modified by Doris
 
-#ifndef DORIS_BE_SRC_QUERY_EXPRS_EXPR_CONTEXT_H
-#define DORIS_BE_SRC_QUERY_EXPRS_EXPR_CONTEXT_H
+#pragma once
 
 #include <memory>
 
@@ -28,7 +27,6 @@
 #include "exprs/expr_value.h"
 #include "exprs/slot_ref.h"
 #include "udf/udf.h"
-#include "udf/udf_internal.h" // for CollectionVal
 
 #undef USING_DORIS_UDF
 #define USING_DORIS_UDF using namespace doris_udf
@@ -36,6 +34,10 @@
 USING_DORIS_UDF;
 
 namespace doris {
+
+namespace vectorized {
+class VOlapScanNode;
+}
 
 class Expr;
 class MemPool;
@@ -161,8 +163,8 @@ private:
     friend class RuntimePredicateWrapper;
     friend class BloomFilterPredicate;
     friend class OlapScanNode;
-    friend class EsScanNode;
     friend class EsPredicate;
+    friend class vectorized::VOlapScanNode;
 
     /// FunctionContexts for each registered expression. The FunctionContexts are created
     /// and owned by this ExprContext.
@@ -202,5 +204,3 @@ inline void* ExprContext::get_value(TupleRow* row) {
 }
 
 } // namespace doris
-
-#endif

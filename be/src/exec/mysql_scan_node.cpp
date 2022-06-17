@@ -23,7 +23,6 @@
 #include "gen_cpp/PlanNodes_types.h"
 #include "runtime/row_batch.h"
 #include "runtime/runtime_state.h"
-#include "runtime/string_value.h"
 #include "runtime/tuple_row.h"
 #include "util/runtime_profile.h"
 
@@ -75,6 +74,7 @@ Status MysqlScanNode::prepare(RuntimeState* state) {
     _my_param.user = mysql_table->user();
     _my_param.passwd = mysql_table->passwd();
     _my_param.db = mysql_table->mysql_db();
+    _my_param.charset = mysql_table->charset();
     // new one scanner
     _mysql_scanner.reset(new (std::nothrow) MysqlScanner(_my_param));
 

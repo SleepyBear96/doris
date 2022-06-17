@@ -18,13 +18,9 @@
 // https://github.com/apache/impala/blob/branch-2.9.0/be/src/exprs/aggregate-functions.h
 // and modified by Doris
 
-#ifndef DORIS_BE_SRC_QUERY_EXPRS_AGGREGATE_FUNCTIONS_H
-#define DORIS_BE_SRC_QUERY_EXPRS_AGGREGATE_FUNCTIONS_H
+#pragma once
 
-//#include "exprs/opcode_registry.h"
-#include "olap/hll.h"
 #include "udf/udf.h"
-#include "udf/udf_internal.h"
 
 namespace doris {
 
@@ -416,5 +412,3 @@ public:
 };
 
 } // namespace doris
-
-#endif

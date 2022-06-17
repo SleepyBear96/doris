@@ -27,7 +27,6 @@
 #include "gen_cpp/HeartbeatService.h"
 #include "gen_cpp/Status_types.h"
 #include "olap/storage_engine.h"
-#include "olap/utils.h"
 #include "runtime/heartbeat_flags.h"
 #include "service/backend_options.h"
 #include "util/debug_util.h"
@@ -38,7 +37,7 @@ using std::fstream;
 using std::nothrow;
 using std::string;
 using std::vector;
-using apache::thrift::transport::TProcessor;
+using apache::thrift::TProcessor;
 
 namespace doris {
 
@@ -104,7 +103,7 @@ Status HeartbeatServer::_heartbeat(const TMasterInfo& master_info) {
         }
     } else {
         if (_master_info->cluster_id != master_info.cluster_id) {
-            OLAP_LOG_WARNING("invalid cluster id: %d. ignore.", master_info.cluster_id);
+            LOG(WARNING) << "invalid cluster id: " << master_info.cluster_id << ". ignore.";
             return Status::InternalError("invalid cluster id. ignore.");
         }
     }

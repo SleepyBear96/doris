@@ -5,12 +5,12 @@
 #pragma once
 
 #include <fmt/format.h>
+#include <glog/logging.h>
+
+#include <boost/stacktrace.hpp>
 #include <iostream>
 #include <string>
 #include <vector>
-
-#include <boost/stacktrace.hpp>
-#include <glog/logging.h>
 
 #include "common/compiler_util.h"
 #include "common/logging.h"
@@ -24,7 +24,7 @@ namespace doris {
 #define APPLY_FOR_ERROR_CODES(M)                                         \
     M(OLAP_SUCCESS, 0, "", false)                                        \
     M(OLAP_ERR_OTHER_ERROR, -1, "", true)                                \
-    M(OLAP_REQUEST_FAILED, -2, "", true)                                 \
+    M(OLAP_REQUEST_FAILED, -2, "", false)                                \
     M(OLAP_ERR_OS_ERROR, -100, "", true)                                 \
     M(OLAP_ERR_DIR_NOT_EXIST, -101, "", true)                            \
     M(OLAP_ERR_FILE_NOT_EXIST, -102, "", true)                           \
@@ -92,7 +92,7 @@ namespace doris {
     M(OLAP_ERR_CE_LOAD_TABLE_ERROR, -303, "", true)                      \
     M(OLAP_ERR_CE_NOT_FINISHED, -304, "", true)                          \
     M(OLAP_ERR_CE_TABLET_ID_EXIST, -305, "", true)                       \
-    M(OLAP_ERR_CE_TRY_CE_LOCK_ERROR, -306, "", true)                     \
+    M(OLAP_ERR_CE_TRY_CE_LOCK_ERROR, -306, "", false)                    \
     M(OLAP_ERR_TABLE_VERSION_DUPLICATE_ERROR, -400, "", true)            \
     M(OLAP_ERR_TABLE_VERSION_INDEX_MISMATCH_ERROR, -401, "", true)       \
     M(OLAP_ERR_TABLE_INDEX_VALIDATE_ERROR, -402, "", true)               \
@@ -176,8 +176,8 @@ namespace doris {
     M(OLAP_ERR_HEADER_LOAD_JSON_HEADER, -1410, "", true)                 \
     M(OLAP_ERR_HEADER_INIT_FAILED, -1411, "", true)                      \
     M(OLAP_ERR_HEADER_PB_PARSE_FAILED, -1412, "", true)                  \
-    M(OLAP_ERR_HEADER_HAS_PENDING_DATA, -1413, "", true)                 \
-    M(OLAP_ERR_SCHEMA_SCHEMA_INVALID, -1500, "", true)                   \
+    M(OLAP_ERR_HEADER_HAS_PENDING_DATA, -1413, "", false)                \
+    M(OLAP_ERR_SCHEMA_SCHEMA_INVALID, -1500, "", false)                  \
     M(OLAP_ERR_SCHEMA_SCHEMA_FIELD_INVALID, -1501, "", true)             \
     M(OLAP_ERR_ALTER_MULTI_TABLE_ERR, -1600, "", true)                   \
     M(OLAP_ERR_ALTER_DELTA_DOES_NOT_EXISTS, -1601, "", true)             \
@@ -201,7 +201,7 @@ namespace doris {
     M(OLAP_ERR_DELETE_SAVE_HEADER_FAILED, -1902, "", true)               \
     M(OLAP_ERR_DELETE_INVALID_PARAMETERS, -1903, "", true)               \
     M(OLAP_ERR_DELETE_INVALID_VERSION, -1904, "", true)                  \
-    M(OLAP_ERR_CUMULATIVE_NO_SUITABLE_VERSION, -2000, "", true)          \
+    M(OLAP_ERR_CUMULATIVE_NO_SUITABLE_VERSION, -2000, "", false)         \
     M(OLAP_ERR_CUMULATIVE_REPEAT_INIT, -2001, "", true)                  \
     M(OLAP_ERR_CUMULATIVE_INVALID_PARAMETERS, -2002, "", true)           \
     M(OLAP_ERR_CUMULATIVE_FAILED_ACQUIRE_DATA_SOURCE, -2003, "", true)   \
@@ -394,7 +394,14 @@ public:
     bool is_end_of_file() const { return code() == TStatusCode::END_OF_FILE; }
     bool is_not_found() const { return code() == TStatusCode::NOT_FOUND; }
     bool is_already_exist() const { return code() == TStatusCode::ALREADY_EXIST; }
-    bool is_io_error() const { return code() == TStatusCode::IO_ERROR; }
+    bool is_io_error() const {
+        auto p_code = precise_code();
+        return code() == TStatusCode::IO_ERROR ||
+               ((OLAP_ERR_IO_ERROR == p_code || OLAP_ERR_READ_UNENOUGH == p_code) &&
+                errno == EIO) ||
+               OLAP_ERR_CHECKSUM_ERROR == p_code || OLAP_ERR_FILE_DATA_ERROR == p_code ||
+               OLAP_ERR_TEST_FILE_ERROR == p_code || OLAP_ERR_ROWBLOCK_READ_INFO_ERROR == p_code;
+    }
 
     /// @return @c true iff the status indicates Uninitialized.
     bool is_uninitialized() const { return code() == TStatusCode::UNINITIALIZED; }
@@ -431,6 +438,9 @@ public:
     /// @return A string representation of this status suitable for printing.
     ///   Returns the string "OK" for success.
     std::string to_string() const;
+
+    /// @return A json representation of this status.
+    std::string to_json() const;
 
     /// @return A string representation of the status code, without the message
     ///   text or sub code information.

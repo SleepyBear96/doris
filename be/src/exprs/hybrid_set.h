@@ -15,18 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef DORIS_BE_SRC_QUERY_EXPRS_HYBRID_SET_H
-#define DORIS_BE_SRC_QUERY_EXPRS_HYBRID_SET_H
+#pragma once
 
 #include <parallel_hashmap/phmap.h>
 
 #include <cstring>
 
 #include "common/object_pool.h"
-#include "common/status.h"
-#include "runtime/datetime_value.h"
 #include "runtime/decimalv2_value.h"
-#include "runtime/primitive_type.h"
 #include "runtime/string_value.h"
 
 namespace doris {
@@ -186,5 +182,3 @@ private:
 };
 
 } // namespace doris
-
-#endif // DORIS_BE_SRC_QUERY_EXPRS_HYBRID_SET_H

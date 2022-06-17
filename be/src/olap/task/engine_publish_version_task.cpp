@@ -28,8 +28,11 @@ namespace doris {
 using std::map;
 
 EnginePublishVersionTask::EnginePublishVersionTask(TPublishVersionRequest& publish_version_req,
-                                                   std::vector<TTabletId>* error_tablet_ids)
-        : _publish_version_req(publish_version_req), _error_tablet_ids(error_tablet_ids) {}
+                                                   std::vector<TTabletId>* error_tablet_ids,
+                                                   std::vector<TTabletId>* succ_tablet_ids)
+        : _publish_version_req(publish_version_req),
+          _error_tablet_ids(error_tablet_ids),
+          _succ_tablet_ids(succ_tablet_ids) {}
 
 Status EnginePublishVersionTask::finish() {
     Status res = Status::OK();
@@ -98,13 +101,16 @@ Status EnginePublishVersionTask::finish() {
             // add visible rowset to tablet
             publish_status = tablet->add_inc_rowset(rowset);
             if (publish_status != Status::OK() &&
-                publish_status != Status::OLAPInternalError(OLAP_ERR_PUSH_VERSION_ALREADY_EXIST)) {
+                publish_status.precise_code() != OLAP_ERR_PUSH_VERSION_ALREADY_EXIST) {
                 LOG(WARNING) << "fail to add visible rowset to tablet. rowset_id="
                              << rowset->rowset_id() << ", tablet_id=" << tablet_info.tablet_id
                              << ", txn_id=" << transaction_id << ", res=" << publish_status;
                 _error_tablet_ids->push_back(tablet_info.tablet_id);
                 res = publish_status;
                 continue;
+            }
+            if (_succ_tablet_ids != nullptr) {
+                _succ_tablet_ids->push_back(tablet_info.tablet_id);
             }
             partition_related_tablet_infos.erase(tablet_info);
             VLOG_NOTICE << "publish version successfully on tablet. tablet=" << tablet->full_name()
@@ -118,8 +124,8 @@ Status EnginePublishVersionTask::finish() {
             if (!_publish_version_req.strict_mode) {
                 break;
             }
-            TabletSharedPtr tablet = StorageEngine::instance()->tablet_manager()->get_tablet(
-                    tablet_info.tablet_id, tablet_info.schema_hash);
+            TabletSharedPtr tablet =
+                    StorageEngine::instance()->tablet_manager()->get_tablet(tablet_info.tablet_id);
             if (tablet == nullptr) {
                 _error_tablet_ids->push_back(tablet_info.tablet_id);
             } else {

@@ -58,7 +58,7 @@ set(EXEC_TEST_FILES
     exec/es_scan_reader_test.cpp
     exec/s3_reader_test.cpp
     exec/multi_bytes_separator_test.cpp
-    # exec/hdfs_file_reader_test.cpp
+    exec/hdfs_file_reader_test.cpp
     # exec/new_olap_scan_node_test.cpp
     # exec/pre_aggregation_node_test.cpp
     # exec/partitioned_hash_table_test.cpp
@@ -86,7 +86,6 @@ set(EXEC_TEST_FILES
     # exec/schema_scanner/schema_collations_scanner_test.cpp
     # exec/schema_scanner/schema_charsets_scanner_test.cpp
     # exec/broker_reader_test.cpp
-    # exec/es_scan_node_test.cpp
 )
 
 if(DEFINED DORIS_WITH_LZO)
@@ -203,11 +202,7 @@ set(OLAP_TEST_FILES
     # olap/memtable_flush_executor_test.cpp
     # olap/push_handler_test.cpp
 )
-set(PLUGIN_TEST_FILES
-    # plugin/plugin_zip_test.cpp
-    # plugin/plugin_loader_test.cpp
-    # plugin/plugin_mgr_test.cpp
-)
+
 set(RUNTIME_TEST_FILES
     # runtime/buffered_tuple_stream_test.cpp
     # runtime/sorter_test.cpp
@@ -228,7 +223,6 @@ set(RUNTIME_TEST_FILES
     # runtime/buffered_block_mgr2_test.cpp
     # runtime/buffered_tuple_stream2_test.cpp
     # runtime/export_task_mgr_test.cpp
-    # runtime/minidump_test.cpp
     runtime/mem_pool_test.cpp
     runtime/string_buffer_test.cpp
     runtime/decimalv2_value_test.cpp
@@ -282,7 +276,6 @@ set(UTIL_TEST_FILES
     util/string_util_test.cpp
     util/string_parser_test.cpp
     util/core_local_test.cpp
-    util/json_util_test.cpp
     util/byte_buffer2_test.cpp
     util/uid_util_test.cpp
     util/encryption_util_test.cpp
@@ -338,10 +331,15 @@ set(VEC_TEST_FILES
     vec/exec/vgeneric_iterators_test.cpp
     vec/exec/vbroker_scan_node_test.cpp
     vec/exec/vbroker_scanner_test.cpp
+    vec/exec/vjson_scanner_test.cpp
     vec/exec/vtablet_sink_test.cpp
+    vec/exec/vorc_scanner_test.cpp
+    vec/exec/vparquet_scanner_test.cpp
     vec/exprs/vexpr_test.cpp
+    vec/function/function_array_aggregation_test.cpp
     vec/function/function_array_element_test.cpp
     vec/function/function_array_index_test.cpp
+    vec/function/function_array_size_test.cpp
     vec/function/function_bitmap_test.cpp
     vec/function/function_comparison_test.cpp
     vec/function/function_hash_test.cpp
@@ -357,6 +355,8 @@ set(VEC_TEST_FILES
     vec/function/function_test_util.cpp
     vec/function/table_function_test.cpp
     vec/runtime/vdata_stream_test.cpp
+    vec/utils/arrow_column_to_doris_column_test.cpp
+    vec/olap/char_type_padding_test.cpp
 )
 
 add_executable(doris_be_test
@@ -369,7 +369,6 @@ add_executable(doris_be_test
     ${GUTIL_TEST_FILES}
     ${HTTP_TEST_FILES}
     ${OLAP_TEST_FILES}
-    ${PLUGIN_TEST_FILES}
     ${RUNTIME_TEST_FILES}
     ${TESTUTIL_TEST_FILES}
     ${UDF_TEST_FILES}

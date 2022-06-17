@@ -15,8 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef DORIS_BE_SRC_TASK_WORKER_POOL_H
-#define DORIS_BE_SRC_TASK_WORKER_POOL_H
+#pragma once
 
 #include <atomic>
 #include <deque>
@@ -28,11 +27,9 @@
 #include "common/status.h"
 #include "gen_cpp/AgentService_types.h"
 #include "gen_cpp/HeartbeatService_types.h"
-#include "gutil/ref_counted.h"
-#include "olap/olap_define.h"
-#include "olap/storage_engine.h"
+#include "olap/data_dir.h"
+#include "olap/tablet.h"
 #include "util/countdown_latch.h"
-#include "util/thread.h"
 
 namespace doris {
 
@@ -250,4 +247,3 @@ private:
     DISALLOW_COPY_AND_ASSIGN(TaskWorkerPool);
 }; // class TaskWorkerPool
 } // namespace doris
-#endif // DORIS_BE_SRC_TASK_WORKER_POOL_H

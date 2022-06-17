@@ -18,21 +18,16 @@
 // https://github.com/apache/impala/blob/branch-2.9.0/be/src/exec/partitioned-hash-table.h
 // and modified by Doris
 
-#ifndef DORIS_BE_SRC_EXEC_NEW_PARTITIONED_HASH_TABLE_H
-#define DORIS_BE_SRC_EXEC_NEW_PARTITIONED_HASH_TABLE_H
+#pragma once
 
 #include <memory>
 #include <vector>
 
 #include "common/compiler_util.h"
-#include "common/logging.h"
 #include "runtime/buffered_tuple_stream3.h"
-#include "runtime/buffered_tuple_stream3.inline.h"
-#include "runtime/bufferpool/buffer_pool.h"
 #include "runtime/bufferpool/suballocator.h"
 #include "runtime/tuple_row.h"
 #include "util/bitmap.h"
-#include "util/hash_util.hpp"
 
 namespace doris {
 
@@ -966,5 +961,3 @@ private:
 };
 
 } // namespace doris
-
-#endif

@@ -15,8 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef DORIS_BE_SRC_COMMON_COMMON_OBJECT_POOL_H
-#define DORIS_BE_SRC_COMMON_COMMON_OBJECT_POOL_H
+#pragma once
 
 #include <mutex>
 #include <vector>
@@ -88,5 +87,3 @@ private:
 };
 
 } // namespace doris
-
-#endif

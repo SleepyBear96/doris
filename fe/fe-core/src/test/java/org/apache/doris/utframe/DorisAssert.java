@@ -32,7 +32,6 @@ import org.apache.doris.analysis.StatementBase;
 import org.apache.doris.catalog.Catalog;
 import org.apache.doris.cluster.ClusterNamespace;
 import org.apache.doris.common.AnalysisException;
-import org.apache.doris.common.Config;
 import org.apache.doris.common.util.SqlParserUtils;
 import org.apache.doris.planner.Planner;
 import org.apache.doris.qe.ConnectContext;
@@ -50,6 +49,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+/**
+ * This class is deprecated.
+ * If you want to start a FE server in unit test, please let your
+ * test class extend {@link TestWithFeService}.
+ */
+@Deprecated
 public class DorisAssert {
 
     private ConnectContext ctx;
@@ -60,12 +65,6 @@ public class DorisAssert {
 
     public DorisAssert(ConnectContext ctx) {
         this.ctx = ctx;
-    }
-
-    public DorisAssert withEnableMV() {
-        ctx.getSessionVariable().setTestMaterializedView(true);
-        Config.enable_materialized_view = true;
-        return this;
     }
 
     public DorisAssert withDatabase(String dbName) throws Exception {
@@ -148,7 +147,7 @@ public class DorisAssert {
 
     private void checkAlterJob() throws InterruptedException {
         // check alter job
-        Map<Long, AlterJobV2> alterJobs = Catalog.getCurrentCatalog().getRollupHandler().getAlterJobsV2();
+        Map<Long, AlterJobV2> alterJobs = Catalog.getCurrentCatalog().getMaterializedViewHandler().getAlterJobsV2();
         for (AlterJobV2 alterJobV2 : alterJobs.values()) {
             while (!alterJobV2.getJobState().isFinalState()) {
                 System.out.println("alter job " + alterJobV2.getDbId()
@@ -210,7 +209,7 @@ public class DorisAssert {
             return explainString;
         }
 
-        public Planner internalExecuteOneAndGetPlan() throws Exception{
+        public Planner internalExecuteOneAndGetPlan() throws Exception {
             SqlScanner input = new SqlScanner(new StringReader(sql), ctx.getSessionVariable().getSqlMode());
             SqlParser parser = new SqlParser(input);
             List<StatementBase> stmts =  SqlParserUtils.getMultiStmts(parser);

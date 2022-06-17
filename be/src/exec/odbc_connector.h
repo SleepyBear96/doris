@@ -15,8 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef DORIS_BE_SRC_QUERY_EXEC_ODBC_CONNECTOR_H
-#define DORIS_BE_SRC_QUERY_EXEC_ODBC_CONNECTOR_H
+#pragma once
 
 #include <fmt/format.h>
 #include <sql.h>
@@ -28,7 +27,6 @@
 
 #include "common/status.h"
 #include "exprs/expr_context.h"
-#include "gen_cpp/Types_types.h"
 #include "runtime/descriptors.h"
 #include "runtime/row_batch.h"
 
@@ -121,5 +119,3 @@ private:
 };
 
 } // namespace doris
-
-#endif

@@ -63,8 +63,8 @@ void register_function_date_time_computation(SimpleFunctionFactory& factory);
 void register_function_timestamp(SimpleFunctionFactory& factory);
 void register_function_utility(SimpleFunctionFactory& factory);
 void register_function_json(SimpleFunctionFactory& factory);
-void register_function_function_hash(SimpleFunctionFactory& factory);
-void register_function_function_ifnull(SimpleFunctionFactory& factory);
+void register_function_hash(SimpleFunctionFactory& factory);
+void register_function_ifnull(SimpleFunctionFactory& factory);
 void register_function_like(SimpleFunctionFactory& factory);
 void register_function_regexp(SimpleFunctionFactory& factory);
 void register_function_random(SimpleFunctionFactory& factory);
@@ -75,11 +75,12 @@ void register_function_convert_tz(SimpleFunctionFactory& factory);
 void register_function_least_greast(SimpleFunctionFactory& factory);
 void register_function_fake(SimpleFunctionFactory& factory);
 void register_function_array(SimpleFunctionFactory& factory);
-void register_geo_functions(SimpleFunctionFactory& factory);
+void register_function_geo(SimpleFunctionFactory& factory);
 
 void register_function_encryption(SimpleFunctionFactory& factory);
 void register_function_regexp_extract(SimpleFunctionFactory& factory);
 void register_function_hex_variadic(SimpleFunctionFactory& factory);
+
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
     using FunctionCreators = phmap::flat_hash_map<std::string, Creator>;
@@ -112,10 +113,8 @@ public:
     }
 
     template <class Function>
-    void register_table_function() {
-        function_creators[Function::name] = &createDefaultFunction<Function>;
-        function_creators[std::string(Function::name) + COMBINATOR_SUFFIX_OUTER] =
-                &createDefaultFunction<Function>;
+    void register_function(std::string name) {
+        function_creators[name] = &createDefaultFunction<Function>;
     }
 
     void register_alias(const std::string& name, const std::string& alias) {
@@ -163,7 +162,7 @@ public:
     static SimpleFunctionFactory& instance() {
         static std::once_flag oc;
         static SimpleFunctionFactory instance;
-        std::call_once(oc, [&]() {
+        std::call_once(oc, []() {
             register_function_bitmap(instance);
             register_function_bitmap_variadic(instance);
             register_function_hll_cardinality(instance);
@@ -196,8 +195,8 @@ public:
             register_function_date_time_to_string(instance);
             register_function_date_time_string_to_string(instance);
             register_function_json(instance);
-            register_function_function_hash(instance);
-            register_function_function_ifnull(instance);
+            register_function_hash(instance);
+            register_function_ifnull(instance);
             register_function_comparison_eq_for_null(instance);
             register_function_like(instance);
             register_function_regexp(instance);
@@ -212,7 +211,7 @@ public:
             register_function_regexp_extract(instance);
             register_function_hex_variadic(instance);
             register_function_array(instance);
-            register_geo_functions(instance);
+            register_function_geo(instance);
         });
         return instance;
     }

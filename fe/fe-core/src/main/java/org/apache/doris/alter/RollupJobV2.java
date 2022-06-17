@@ -19,10 +19,13 @@ package org.apache.doris.alter;
 
 import org.apache.doris.analysis.Analyzer;
 import org.apache.doris.analysis.CreateMaterializedViewStmt;
+import org.apache.doris.analysis.DescriptorTable;
 import org.apache.doris.analysis.Expr;
 import org.apache.doris.analysis.MVColumnItem;
+import org.apache.doris.analysis.SlotDescriptor;
 import org.apache.doris.analysis.SqlParser;
 import org.apache.doris.analysis.SqlScanner;
+import org.apache.doris.analysis.TupleDescriptor;
 import org.apache.doris.catalog.Catalog;
 import org.apache.doris.catalog.Column;
 import org.apache.doris.catalog.Database;
@@ -69,7 +72,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.gson.annotations.SerializedName;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -196,7 +198,7 @@ public class RollupJobV2 extends AlterJobV2 implements GsonPostProcessable {
         MarkedCountDownLatch<Long, Long> countDownLatch = new MarkedCountDownLatch<Long, Long>(totalReplicaNum);
         OlapTable tbl;
         try {
-            tbl = db.getTableOrMetaException(tableId, Table.TableType.OLAP);
+            tbl = (OlapTable) db.getTableOrMetaException(tableId, Table.TableType.OLAP);
         } catch (MetaNotFoundException e) {
             throw new AlterCancelException(e.getMessage());
         }
@@ -220,19 +222,21 @@ public class RollupJobV2 extends AlterJobV2 implements GsonPostProcessable {
                     List<Replica> rollupReplicas = rollupTablet.getReplicas();
                     for (Replica rollupReplica : rollupReplicas) {
                         long backendId = rollupReplica.getBackendId();
+                        long rollupReplicaId = rollupReplica.getId();
                         Preconditions.checkNotNull(tabletIdMap.get(rollupTabletId)); // baseTabletId
                         countDownLatch.addMark(backendId, rollupTabletId);
                         // create replica with version 1.
                         // version will be updated by following load process, or when rollup task finished.
                         CreateReplicaTask createReplicaTask = new CreateReplicaTask(
                                 backendId, dbId, tableId, partitionId, rollupIndexId, rollupTabletId,
-                                rollupShortKeyColumnCount, rollupSchemaHash,
+                                rollupReplicaId, rollupShortKeyColumnCount, rollupSchemaHash,
                                 Partition.PARTITION_INIT_VERSION,
                                 rollupKeysType, TStorageType.COLUMN, storageMedium,
                                 rollupSchema, tbl.getCopiedBfColumns(), tbl.getBfFpp(), countDownLatch,
                                 tbl.getCopiedIndexes(),
                                 tbl.isInMemory(),
-                                tabletType);
+                                tabletType,
+                                tbl.getCompressionType());
                         createReplicaTask.setBaseTablet(tabletIdMap.get(rollupTabletId), baseSchemaHash);
                         if (this.storageFormat != null) {
                             createReplicaTask.setStorageFormat(this.storageFormat);
@@ -333,7 +337,7 @@ public class RollupJobV2 extends AlterJobV2 implements GsonPostProcessable {
 
         OlapTable tbl;
         try {
-            tbl = db.getTableOrMetaException(tableId, Table.TableType.OLAP);
+            tbl = (OlapTable) db.getTableOrMetaException(tableId, Table.TableType.OLAP);
         } catch (MetaNotFoundException e) {
             throw new AlterCancelException(e.getMessage());
         }
@@ -362,14 +366,22 @@ public class RollupJobV2 extends AlterJobV2 implements GsonPostProcessable {
                         }
                     }
 
+                    List<Column> fullSchema = tbl.getBaseSchema(true);
+                    DescriptorTable descTable = new DescriptorTable();
+                    for (Column column : fullSchema) {
+                        TupleDescriptor destTupleDesc = descTable.createTupleDescriptor();
+                        SlotDescriptor destSlotDesc = descTable.addSlotDescriptor(destTupleDesc);
+                        destSlotDesc.setIsMaterialized(true);
+                        destSlotDesc.setColumn(column);
+                        destSlotDesc.setIsNullable(column.isAllowNull());
+                    }
+
                     List<Replica> rollupReplicas = rollupTablet.getReplicas();
                     for (Replica rollupReplica : rollupReplicas) {
-                        AlterReplicaTask rollupTask = new AlterReplicaTask(
-                                rollupReplica.getBackendId(), dbId, tableId, partitionId,
-                                rollupIndexId, baseIndexId,
-                                rollupTabletId, baseTabletId, rollupReplica.getId(),
-                                rollupSchemaHash, baseSchemaHash,
-                                visibleVersion, jobId, JobType.ROLLUP, defineExprs);
+                        AlterReplicaTask rollupTask = new AlterReplicaTask(rollupReplica.getBackendId(), dbId, tableId,
+                                partitionId, rollupIndexId, baseIndexId, rollupTabletId, baseTabletId,
+                                rollupReplica.getId(), rollupSchemaHash, baseSchemaHash, visibleVersion, jobId,
+                                JobType.ROLLUP, defineExprs, descTable);
                         rollupBatchTask.addTask(rollupTask);
                     }
                 }
@@ -404,7 +416,7 @@ public class RollupJobV2 extends AlterJobV2 implements GsonPostProcessable {
 
         OlapTable tbl;
         try {
-            tbl = db.getTableOrMetaException(tableId, Table.TableType.OLAP);
+            tbl = (OlapTable) db.getTableOrMetaException(tableId, Table.TableType.OLAP);
         } catch (MetaNotFoundException e) {
             throw new AlterCancelException(e.getMessage());
         }
@@ -542,7 +554,7 @@ public class RollupJobV2 extends AlterJobV2 implements GsonPostProcessable {
      */
     private void replayCreateJob(RollupJobV2 replayedJob) throws MetaNotFoundException {
         Database db = Catalog.getCurrentCatalog().getDbOrMetaException(dbId);
-        OlapTable olapTable = db.getTableOrMetaException(tableId, Table.TableType.OLAP);
+        OlapTable olapTable = (OlapTable) db.getTableOrMetaException(tableId, Table.TableType.OLAP);
 
         olapTable.writeLock();
         try {
@@ -582,7 +594,7 @@ public class RollupJobV2 extends AlterJobV2 implements GsonPostProcessable {
      */
     private void replayPendingJob(RollupJobV2 replayedJob) throws MetaNotFoundException {
         Database db = Catalog.getCurrentCatalog().getDbOrMetaException(dbId);
-        OlapTable olapTable = db.getTableOrMetaException(tableId, Table.TableType.OLAP);
+        OlapTable olapTable = (OlapTable) db.getTableOrMetaException(tableId, Table.TableType.OLAP);
         olapTable.writeLock();
         try {
             addRollupIndexToCatalog(olapTable);
@@ -615,7 +627,7 @@ public class RollupJobV2 extends AlterJobV2 implements GsonPostProcessable {
                 }
             }
         }
-        
+
         this.jobState = JobState.FINISHED;
         this.finishedTimeMs = replayedJob.finishedTimeMs;
 

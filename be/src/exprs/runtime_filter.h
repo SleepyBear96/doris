@@ -15,8 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef DORIS_BE_SRC_QUERY_EXPRS_RUNTIME_PREDICATE_H
-#define DORIS_BE_SRC_QUERY_EXPRS_RUNTIME_PREDICATE_H
+#pragma once
 
 #include <condition_variable>
 #include <list>
@@ -24,9 +23,8 @@
 #include <mutex>
 
 #include "exprs/expr_context.h"
-#include "gen_cpp/Exprs_types.h"
-#include "runtime/types.h"
 #include "util/runtime_profile.h"
+#include "util/time.h"
 #include "util/uid_util.h"
 
 namespace doris {
@@ -123,7 +121,8 @@ public:
               _expr_order(-1),
               _always_true(false),
               _probe_ctx(nullptr),
-              _is_ignored(false) {}
+              _is_ignored(false),
+              registration_time_(MonotonicMillis()) {}
 
     ~IRuntimeFilter() = default;
 
@@ -291,6 +290,9 @@ protected:
     RuntimeProfile::Counter* _await_time_cost = nullptr;
     RuntimeProfile::Counter* _effect_time_cost = nullptr;
     std::unique_ptr<ScopedTimer<MonotonicStopWatch>> _effect_timer;
+
+    /// Time in ms (from MonotonicMillis()), that the filter was registered.
+    const int64_t registration_time_;
 };
 
 // avoid expose RuntimePredicateWrapper
@@ -306,5 +308,3 @@ private:
 };
 
 } // namespace doris
-
-#endif

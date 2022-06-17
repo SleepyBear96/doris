@@ -15,19 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef DORIS_BE_SRC_QUERY_EXEC_CROSS_JOIN_NODE_H
-#define DORIS_BE_SRC_QUERY_EXEC_CROSS_JOIN_NODE_H
+#pragma once
 
 #include <string>
 #include <thread>
 #include <unordered_set>
 
 #include "exec/blocking_join_node.h"
-#include "exec/exec_node.h"
 #include "exec/row_batch_list.h"
 #include "gen_cpp/PlanNodes_types.h"
 #include "runtime/descriptors.h"
-#include "runtime/mem_pool.h"
 
 namespace doris {
 
@@ -73,5 +70,3 @@ private:
 };
 
 } // namespace doris
-
-#endif

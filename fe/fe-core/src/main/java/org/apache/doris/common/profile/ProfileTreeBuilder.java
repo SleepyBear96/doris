@@ -17,8 +17,6 @@
 
 package org.apache.doris.common.profile;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.apache.doris.common.Pair;
 import org.apache.doris.common.UserException;
 import org.apache.doris.common.util.Counter;
@@ -28,10 +26,12 @@ import org.apache.doris.thrift.TUnit;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
 
+import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
 import java.util.Map;
@@ -267,6 +267,14 @@ public class ProfileTreeBuilder {
         try (Formatter fmt = new Formatter()) {
             node.setNonChild(fmt.format("%.2f", profile.getLocalTimePercent()).toString());
         }
+
+        if (!profile.getInfoStrings().isEmpty()) {
+            ArrayList<String> infoStrings = new ArrayList<String>();
+            for (Map.Entry<String, String> entry : profile.getInfoStrings().entrySet()) {
+                infoStrings.add(entry.getKey() +  ": " + entry.getValue());
+            }
+            node.setInfoStrings(infoStrings);
+        }
         CounterNode rootCounterNode = new CounterNode();
         buildCounterNode(profile, RuntimeProfile.ROOT_COUNTER, rootCounterNode);
         node.setCounterNode(rootCounterNode);
@@ -276,8 +284,8 @@ public class ProfileTreeBuilder {
             node.setParentNode(root);
         }
 
-        if ((node.name.equals(PROFILE_NAME_EXCHANGE_NODE) ||
-            node.name.equals(PROFILE_NAME_VEXCHANGE_NODE)) && instanceId == null) {
+        if ((node.name.equals(PROFILE_NAME_EXCHANGE_NODE)
+                || node.name.equals(PROFILE_NAME_VEXCHANGE_NODE)) && instanceId == null) {
             exchangeNodes.add(node);
         }
 

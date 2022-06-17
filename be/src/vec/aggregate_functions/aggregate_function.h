@@ -159,7 +159,7 @@ public:
         }
     }
     //now this is use for sum/count/avg/min/max win function, other win function should override this function in class
-    //stddev_pop/stddev_samp/variance_pop/variance_samp
+    //stddev_pop/stddev_samp/variance_pop/variance_samp/hll_union_agg/group_concat
     void add_range_single_place(int64_t partition_start, int64_t partition_end, int64_t frame_start,
                                 int64_t frame_end, AggregateDataPtr place, const IColumn** columns,
                                 Arena* arena) const override {
@@ -208,5 +208,22 @@ public:
 };
 
 using AggregateFunctionPtr = std::shared_ptr<IAggregateFunction>;
+
+class AggregateFunctionGuard {
+public:
+    using AggregateData = std::remove_pointer_t<AggregateDataPtr>;
+
+    explicit AggregateFunctionGuard(const IAggregateFunction* function)
+            : _function(function),
+              _data(std::make_unique<AggregateData[]>(function->size_of_data())) {
+        _function->create(_data.get());
+    };
+    ~AggregateFunctionGuard() { _function->destroy(_data.get()); }
+    AggregateDataPtr data() { return _data.get(); };
+
+private:
+    const IAggregateFunction* _function;
+    std::unique_ptr<AggregateData[]> _data;
+};
 
 } // namespace doris::vectorized

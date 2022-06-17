@@ -17,15 +17,17 @@
 
 package org.apache.doris.qe;
 
+import org.apache.doris.analysis.AdminCancelRebalanceDiskStmt;
 import org.apache.doris.analysis.AdminCancelRepairTableStmt;
 import org.apache.doris.analysis.AdminCheckTabletsStmt;
 import org.apache.doris.analysis.AdminCleanTrashStmt;
 import org.apache.doris.analysis.AdminCompactTableStmt;
-import org.apache.doris.analysis.AdminCancelRebalanceDiskStmt;
 import org.apache.doris.analysis.AdminRebalanceDiskStmt;
 import org.apache.doris.analysis.AdminRepairTableStmt;
 import org.apache.doris.analysis.AdminSetConfigStmt;
 import org.apache.doris.analysis.AdminSetReplicaStatusStmt;
+import org.apache.doris.analysis.AlterCatalogNameStmt;
+import org.apache.doris.analysis.AlterCatalogPropertyStmt;
 import org.apache.doris.analysis.AlterClusterStmt;
 import org.apache.doris.analysis.AlterColumnStatsStmt;
 import org.apache.doris.analysis.AlterDatabasePropertyStmt;
@@ -44,6 +46,7 @@ import org.apache.doris.analysis.CancelAlterSystemStmt;
 import org.apache.doris.analysis.CancelAlterTableStmt;
 import org.apache.doris.analysis.CancelBackupStmt;
 import org.apache.doris.analysis.CancelLoadStmt;
+import org.apache.doris.analysis.CreateCatalogStmt;
 import org.apache.doris.analysis.CreateClusterStmt;
 import org.apache.doris.analysis.CreateDataSyncJobStmt;
 import org.apache.doris.analysis.CreateDbStmt;
@@ -51,6 +54,7 @@ import org.apache.doris.analysis.CreateEncryptKeyStmt;
 import org.apache.doris.analysis.CreateFileStmt;
 import org.apache.doris.analysis.CreateFunctionStmt;
 import org.apache.doris.analysis.CreateMaterializedViewStmt;
+import org.apache.doris.analysis.CreatePolicyStmt;
 import org.apache.doris.analysis.CreateRepositoryStmt;
 import org.apache.doris.analysis.CreateResourceStmt;
 import org.apache.doris.analysis.CreateRoleStmt;
@@ -63,12 +67,14 @@ import org.apache.doris.analysis.CreateUserStmt;
 import org.apache.doris.analysis.CreateViewStmt;
 import org.apache.doris.analysis.DdlStmt;
 import org.apache.doris.analysis.DeleteStmt;
+import org.apache.doris.analysis.DropCatalogStmt;
 import org.apache.doris.analysis.DropClusterStmt;
 import org.apache.doris.analysis.DropDbStmt;
 import org.apache.doris.analysis.DropEncryptKeyStmt;
 import org.apache.doris.analysis.DropFileStmt;
 import org.apache.doris.analysis.DropFunctionStmt;
 import org.apache.doris.analysis.DropMaterializedViewStmt;
+import org.apache.doris.analysis.DropPolicyStmt;
 import org.apache.doris.analysis.DropRepositoryStmt;
 import org.apache.doris.analysis.DropResourceStmt;
 import org.apache.doris.analysis.DropRoleStmt;
@@ -168,18 +174,7 @@ public class DdlExecutor {
                 catalog.getLoadManager().createLoadJobFromStmt(loadStmt);
             }
         } else if (ddlStmt instanceof CancelLoadStmt) {
-            boolean isAccurateMatch = ((CancelLoadStmt) ddlStmt).isAccurateMatch();
-            boolean isLabelExist = catalog.getLoadInstance().isLabelExist(
-                    ((CancelLoadStmt) ddlStmt).getDbName(),
-                    ((CancelLoadStmt) ddlStmt).getLabel(), isAccurateMatch);
-            if (isLabelExist) {
-                catalog.getLoadInstance().cancelLoadJob((CancelLoadStmt) ddlStmt,
-                        isAccurateMatch);
-            }
-            if (!isLabelExist || isAccurateMatch) {
-                catalog.getLoadManager().cancelLoadJob((CancelLoadStmt) ddlStmt,
-                        isAccurateMatch);
-            }
+            catalog.getLoadManager().cancelLoadJob((CancelLoadStmt) ddlStmt);
         } else if (ddlStmt instanceof CreateRoutineLoadStmt) {
             catalog.getRoutineLoadManager().createRoutineLoadJob((CreateRoutineLoadStmt) ddlStmt);
         } else if (ddlStmt instanceof PauseRoutineLoadStmt) {
@@ -274,8 +269,8 @@ public class DdlExecutor {
             if (!syncJobMgr.isJobNameExist(createSyncJobStmt.getDbName(), createSyncJobStmt.getJobName())) {
                 syncJobMgr.addDataSyncJob((CreateDataSyncJobStmt) ddlStmt);
             } else {
-                throw new DdlException("The syncJob with jobName '" + createSyncJobStmt.getJobName() +
-                        "' in database [" + createSyncJobStmt.getDbName() + "] is already exists.");
+                throw new DdlException("The syncJob with jobName '" + createSyncJobStmt.getJobName()
+                        + "' in database [" + createSyncJobStmt.getDbName() + "] is already exists.");
             }
         } else if (ddlStmt instanceof ResumeSyncJobStmt) {
             catalog.getSyncJobManager().resumeSyncJob((ResumeSyncJobStmt) ddlStmt);
@@ -305,6 +300,18 @@ public class DdlExecutor {
             catalog.getStatisticsJobManager().createStatisticsJob((AnalyzeStmt) ddlStmt);
         } else if (ddlStmt instanceof AlterResourceStmt) {
             catalog.getResourceMgr().alterResource((AlterResourceStmt) ddlStmt);
+        } else if (ddlStmt instanceof CreatePolicyStmt) {
+            catalog.getPolicyMgr().createPolicy((CreatePolicyStmt) ddlStmt);
+        } else if (ddlStmt instanceof DropPolicyStmt) {
+            catalog.getPolicyMgr().dropPolicy((DropPolicyStmt) ddlStmt);
+        } else if (ddlStmt instanceof CreateCatalogStmt) {
+            catalog.getDataSourceMgr().createCatalog((CreateCatalogStmt) ddlStmt);
+        } else if (ddlStmt instanceof DropCatalogStmt) {
+            catalog.getDataSourceMgr().dropCatalog((DropCatalogStmt) ddlStmt);
+        } else if (ddlStmt instanceof AlterCatalogNameStmt) {
+            catalog.getDataSourceMgr().alterCatalogName((AlterCatalogNameStmt) ddlStmt);
+        } else if (ddlStmt instanceof AlterCatalogPropertyStmt) {
+            catalog.getDataSourceMgr().alterCatalogProps((AlterCatalogPropertyStmt) ddlStmt);
         } else {
             throw new DdlException("Unknown statement.");
         }

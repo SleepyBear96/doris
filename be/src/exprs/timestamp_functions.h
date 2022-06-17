@@ -18,13 +18,11 @@
 // https://github.com/apache/impala/blob/branch-2.9.0/be/src/exprs/timestamp-functions.h
 // and modified by Doris
 
-#ifndef DORIS_BE_SRC_QUERY_EXPRS_TIMESTAMP_FUNCTIONS_H
-#define DORIS_BE_SRC_QUERY_EXPRS_TIMESTAMP_FUNCTIONS_H
+#pragma once
 
 #include <thread>
 
 #include "runtime/datetime_value.h"
-#include "runtime/string_value.h"
 
 namespace doris {
 
@@ -439,5 +437,3 @@ public:
                                  doris_udf::FunctionContext::FunctionStateScope scope);
 };
 } // namespace doris
-
-#endif

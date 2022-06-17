@@ -15,12 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef DORIS_BE_SRC_QUERY_EXEC_READ_WRITE_UTIL_H
-#define DORIS_BE_SRC_QUERY_EXEC_READ_WRITE_UTIL_H
+#pragma once
 
 #include <sstream>
 
-#include "common/logging.h"
 #include "common/status.h"
 
 namespace doris {
@@ -231,4 +229,3 @@ inline int ReadWriteUtil::decode_vint_size(int8_t byte) {
 }
 
 } // namespace doris
-#endif

@@ -18,8 +18,7 @@
 // https://github.com/apache/impala/blob/branch-2.9.0/be/src/exprs/string-functions.h
 // and modified by Doris
 
-#ifndef DORIS_BE_SRC_QUERY_EXPRS_STRING_FUNCTIONS_H
-#define DORIS_BE_SRC_QUERY_EXPRS_STRING_FUNCTIONS_H
+#pragma once
 
 #include <re2/re2.h>
 
@@ -28,9 +27,7 @@
 #include <sstream>
 #include <string_view>
 
-#include "anyval_util.h"
 #include "gutil/strings/numbers.h"
-#include "runtime/string_search.hpp"
 #include "runtime/string_value.h"
 
 namespace doris {
@@ -192,5 +189,3 @@ public:
                                    const StringVal& match_parameter);
 };
 } // namespace doris
-
-#endif

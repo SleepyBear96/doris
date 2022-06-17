@@ -25,13 +25,13 @@ import org.apache.doris.common.io.Text;
 import org.apache.doris.common.io.Writable;
 import org.apache.doris.common.util.SqlUtils;
 import org.apache.doris.common.util.Util;
+import org.apache.doris.external.hudi.HudiTable;
 import org.apache.doris.thrift.TTableDescriptor;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 /**
  * Internal representation of table-related metadata. A table contains several partitions.
  */
-public class Table extends MetaObject implements Writable {
+public class Table extends MetaObject implements Writable, TableIf {
     private static final Logger LOG = LogManager.getLogger(Table.class);
 
     // empirical value.
@@ -57,19 +57,6 @@ public class Table extends MetaObject implements Writable {
     public static final long TRY_LOCK_TIMEOUT_MS = 100L;
 
     public volatile boolean isDropped = false;
-
-    public enum TableType {
-        MYSQL,
-        ODBC,
-        OLAP,
-        SCHEMA,
-        INLINE_VIEW,
-        VIEW,
-        BROKER,
-        ELASTICSEARCH,
-        HIVE,
-        ICEBERG
-    }
 
     protected long id;
     protected volatile String name;
@@ -83,7 +70,7 @@ public class Table extends MetaObject implements Writable {
      *      to query but visible to load process.
      *  If you want to get all visible columns, you should call getBaseSchema() method, which is override in
      *  sub classes.
-     *  
+     *
      *  NOTICE: the order of this fullSchema is meaningless to OlapTable
      */
     /**
@@ -179,7 +166,7 @@ public class Table extends MetaObject implements Writable {
 
     public boolean tryWriteLock(long timeout, TimeUnit unit) {
         try {
-           return this.rwLock.writeLock().tryLock(timeout, unit);
+            return this.rwLock.writeLock().tryLock(timeout, unit);
         } catch (InterruptedException e) {
             LOG.warn("failed to try write lock at table[" + name + "]", e);
             return false;
@@ -341,6 +328,8 @@ public class Table extends MetaObject implements Writable {
             table = new HiveTable();
         } else if (type == TableType.ICEBERG) {
             table = new IcebergTable();
+        } else if (type == TableType.HUDI) {
+            table = new HudiTable();
         } else {
             throw new IOException("Unknown table type: " + type.name());
         }
@@ -433,6 +422,8 @@ public class Table extends MetaObject implements Writable {
                 return "ElasticSearch";
             case HIVE:
                 return "Hive";
+            case HUDI:
+                return "Hudi";
             default:
                 return null;
         }
@@ -452,6 +443,7 @@ public class Table extends MetaObject implements Writable {
             case BROKER:
             case ELASTICSEARCH:
             case HIVE:
+            case HUDI:
                 return "EXTERNAL TABLE";
             default:
                 return null;

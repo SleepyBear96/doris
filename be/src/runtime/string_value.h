@@ -18,14 +18,13 @@
 // https://github.com/apache/impala/blob/branch-2.9.0/be/src/runtime/string-value.h
 // and modified by Doris
 
-#ifndef DORIS_BE_RUNTIME_STRING_VALUE_H
-#define DORIS_BE_RUNTIME_STRING_VALUE_H
+#pragma once
 
 #include <string.h>
 
 #include "udf/udf.h"
-#include "util/hash_util.hpp"
 #include "util/cpu_info.h"
+#include "util/hash_util.hpp"
 #include "vec/common/string_ref.h"
 #ifdef __SSE4_2__
 #include "util/sse_util.hpp"
@@ -91,6 +90,7 @@ struct StringValue {
     StringValue(char* ptr, int len) : ptr(ptr), len(len) {}
     StringValue(const char* ptr, int len) : ptr(const_cast<char*>(ptr)), len(len) {}
     StringValue() : ptr(nullptr), len(0) {}
+    StringValue(const StringRef& str) : ptr(const_cast<char*>(str.data)), len(str.size) {}
 
     /// Construct a StringValue from 's'.  's' must be valid for as long as
     /// this object is valid.
@@ -206,5 +206,3 @@ std::ostream& operator<<(std::ostream& os, const StringValue& string_value);
 std::size_t operator-(const StringValue& v1, const StringValue& v2);
 
 } // namespace doris
-
-#endif

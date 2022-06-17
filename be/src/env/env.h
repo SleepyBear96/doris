@@ -13,9 +13,8 @@
 #include <string>
 
 #include "common/status.h"
-#include "gen_cpp/AgentService_types.h"
-#include "gen_cpp/olap_file.pb.h"
 #include "gen_cpp/Types_types.h"
+#include "gen_cpp/olap_file.pb.h"
 #include "util/slice.h"
 
 namespace doris {

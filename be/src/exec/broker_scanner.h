@@ -27,7 +27,6 @@
 #include "exec/base_scanner.h"
 #include "gen_cpp/PlanNodes_types.h"
 #include "gen_cpp/Types_types.h"
-#include "gen_cpp/internal_service.pb.h"
 #include "runtime/mem_pool.h"
 #include "util/runtime_profile.h"
 #include "util/slice.h"
@@ -56,13 +55,18 @@ public:
                   const TBrokerScanRangeParams& params, const std::vector<TBrokerRangeDesc>& ranges,
                   const std::vector<TNetworkAddress>& broker_addresses,
                   const std::vector<TExpr>& pre_filter_texprs, ScannerCounter* counter);
-    virtual ~BrokerScanner();
+    ~BrokerScanner() override;
 
     // Open this scanner, will initialize information need to
     Status open() override;
 
     // Get next tuple
-    Status get_next(Tuple* tuple, MemPool* tuple_pool, bool* eof, bool* fill_tuple) override;
+    virtual Status get_next(Tuple* tuple, MemPool* tuple_pool, bool* eof,
+                            bool* fill_tuple) override;
+
+    Status get_next(vectorized::Block* block, bool* eof) override {
+        return Status::NotSupported("Not Implemented get block");
+    }
 
     // Close this scanner
     void close() override;
@@ -72,6 +76,8 @@ protected:
     Status open_next_reader();
 
     Status _line_to_src_tuple(const Slice& line);
+
+    Status _line_split_to_values(const Slice& line);
 
 private:
     Status open_file_reader();
@@ -93,9 +99,6 @@ private:
     Status _convert_one_row(const Slice& line, Tuple* tuple, MemPool* tuple_pool, bool* fill_tuple);
 
 protected:
-    const std::vector<TBrokerRangeDesc>& _ranges;
-    const std::vector<TNetworkAddress>& _broker_addresses;
-
     std::string _value_separator;
     std::string _line_delimiter;
     TFileFormatType::type _file_format_type;
@@ -103,10 +106,9 @@ protected:
     int _line_delimiter_length;
 
     // Reader
-    FileReader* _cur_file_reader;
+    std::shared_ptr<FileReader> _cur_file_reader;
     LineReader* _cur_line_reader;
     Decompressor* _cur_decompressor;
-    int _next_range;
     bool _cur_line_reader_eof;
 
     // When we fetch range start from 0, header_type="csv_with_names" skip first line
@@ -114,8 +116,6 @@ protected:
     // When we fetch range doesn't start from 0 will always skip the first line
     int _skip_lines;
 
-    // used to hold current StreamLoadPipe
-    std::shared_ptr<StreamLoadPipe> _stream_load_pipe;
     std::vector<Slice> _split_values;
 };
 

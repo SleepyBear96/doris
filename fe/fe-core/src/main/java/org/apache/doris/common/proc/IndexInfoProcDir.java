@@ -22,7 +22,7 @@ import org.apache.doris.catalog.Database;
 import org.apache.doris.catalog.MaterializedIndexMeta;
 import org.apache.doris.catalog.OlapTable;
 import org.apache.doris.catalog.Table;
-import org.apache.doris.catalog.Table.TableType;
+import org.apache.doris.catalog.TableIf.TableType;
 import org.apache.doris.common.AnalysisException;
 
 import com.google.common.base.Joiner;
@@ -110,7 +110,7 @@ public class IndexInfoProcDir implements ProcDirInterface {
     public ProcNodeInterface lookup(String idxIdStr) throws AnalysisException {
         Preconditions.checkNotNull(db);
         Preconditions.checkNotNull(table);
-        
+
         long idxId;
         try {
             idxId = Long.valueOf(idxIdStr);

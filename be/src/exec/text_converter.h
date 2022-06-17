@@ -15,11 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#ifndef DORIS_BE_SRC_QUERY_EXEC_TEXT_CONVERTER_H
-#define DORIS_BE_SRC_QUERY_EXEC_TEXT_CONVERTER_H
+#pragma once
 
-#include "runtime/runtime_state.h"
-#include "vec/core/block.h"
+#include "vec/columns/column.h"
 namespace doris {
 
 class MemPool;
@@ -48,6 +46,10 @@ public:
     bool write_slot(const SlotDescriptor* slot_desc, Tuple* tuple, const char* data, int len,
                     bool copy_string, bool need_escape, MemPool* pool);
 
+    void write_string_column(const SlotDescriptor* slot_desc,
+                             vectorized::MutableColumnPtr* column_ptr, const char* data,
+                             size_t len);
+
     bool write_column(const SlotDescriptor* slot_desc, vectorized::MutableColumnPtr* column_ptr,
                       const char* data, size_t len, bool copy_string, bool need_escape);
 
@@ -65,5 +67,3 @@ private:
 };
 
 } // namespace doris
-
-#endif

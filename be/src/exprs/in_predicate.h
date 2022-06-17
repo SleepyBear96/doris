@@ -18,16 +18,13 @@
 // https://github.com/apache/impala/blob/branch-2.9.0/be/src/exprs/in-predicate.h
 // and modified by Doris
 
-#ifndef DORIS_BE_SRC_QUERY_EXPRS_IN_PREDICATE_H
-#define DORIS_BE_SRC_QUERY_EXPRS_IN_PREDICATE_H
+#pragma once
 
 #include <string>
 #include <unordered_set>
 
-#include "exprs/create_predicate_function.h"
 #include "exprs/hybrid_set.h"
 #include "exprs/predicate.h"
-#include "runtime/raw_value.h"
 
 namespace doris {
 
@@ -75,5 +72,3 @@ private:
 };
 
 } // namespace doris
-
-#endif

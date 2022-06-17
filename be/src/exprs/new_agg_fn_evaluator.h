@@ -18,18 +18,12 @@
 // https://github.com/apache/impala/blob/branch-2.10.0/be/src/exprs/agg-fn-evaluator.h
 // and modified by Doris
 
-#ifndef IMPALA_EXPRS_AGG_FN_EVALUATOR_H
-#define IMPALA_EXPRS_AGG_FN_EVALUATOR_H
+#pragma once
 
 #include <string>
 
-#include "common/compiler_util.h"
 #include "common/status.h"
 #include "exprs/agg_fn.h"
-#include "exprs/hybrid_map.h"
-#include "gen_cpp/Exprs_types.h"
-#include "gen_cpp/PlanNodes_types.h"
-#include "gen_cpp/Types_types.h"
 #include "runtime/descriptors.h"
 #include "runtime/tuple_row.h"
 #include "runtime/types.h"
@@ -318,5 +312,3 @@ inline void NewAggFnEvaluator::Finalize(const std::vector<NewAggFnEvaluator*>& e
 }
 
 } // namespace doris
-
-#endif

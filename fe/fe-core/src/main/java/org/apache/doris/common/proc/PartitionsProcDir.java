@@ -33,7 +33,7 @@ import org.apache.doris.catalog.OlapTable;
 import org.apache.doris.catalog.Partition;
 import org.apache.doris.catalog.PartitionInfo;
 import org.apache.doris.catalog.PartitionType;
-import org.apache.doris.catalog.Table.TableType;
+import org.apache.doris.catalog.TableIf.TableType;
 import org.apache.doris.catalog.Type;
 import org.apache.doris.common.AnalysisException;
 import org.apache.doris.common.ErrorCode;
@@ -101,7 +101,7 @@ public class PartitionsProcDir implements ProcDirInterface {
                 rightVal = ((DateLiteral) subExpr.getChild(1)).getLongValue();
             } else {
                 leftVal = Long.parseLong(element.toString());
-                rightVal = ((IntLiteral)subExpr.getChild(1)).getLongValue();
+                rightVal = ((IntLiteral) subExpr.getChild(1)).getLongValue();
             }
             switch (binaryPredicate.getOp()) {
                 case EQ:
@@ -121,7 +121,7 @@ public class PartitionsProcDir implements ProcDirInterface {
                     Preconditions.checkState(false, "No defined binary operator.");
             }
         } else {
-            return like((String)element, ((StringLiteral) subExpr.getChild(1)).getValue());
+            return like((String) element, ((StringLiteral) subExpr.getChild(1)).getValue());
         }
         return true;
     }
@@ -177,7 +177,7 @@ public class PartitionsProcDir implements ProcDirInterface {
             if (endIndex > filterPartitionInfos.size()) {
                 endIndex = filterPartitionInfos.size();
             }
-            filterPartitionInfos = filterPartitionInfos.subList(beginIndex,endIndex);
+            filterPartitionInfos = filterPartitionInfos.subList(beginIndex, endIndex);
         }
 
         return getBasicProcResult(filterPartitionInfos);

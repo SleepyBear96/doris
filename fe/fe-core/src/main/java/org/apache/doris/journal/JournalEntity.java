@@ -36,6 +36,7 @@ import org.apache.doris.cluster.Cluster;
 import org.apache.doris.common.io.Text;
 import org.apache.doris.common.io.Writable;
 import org.apache.doris.common.util.SmallFileMgr.SmallFile;
+import org.apache.doris.datasource.CatalogLog;
 import org.apache.doris.ha.MasterInfo;
 import org.apache.doris.journal.bdbje.Timestamp;
 import org.apache.doris.load.DeleteInfo;
@@ -90,12 +91,13 @@ import org.apache.doris.persist.TableInfo;
 import org.apache.doris.persist.TablePropertyInfo;
 import org.apache.doris.persist.TruncateTableInfo;
 import org.apache.doris.plugin.PluginInfo;
+import org.apache.doris.policy.DropPolicyLog;
+import org.apache.doris.policy.Policy;
 import org.apache.doris.system.Backend;
 import org.apache.doris.system.Frontend;
 import org.apache.doris.transaction.TransactionState;
 
 import com.google.common.base.Preconditions;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -534,7 +536,7 @@ public class JournalEntity implements Writable {
                 break;
             }
             case OperationType.OP_CREATE_RESOURCE:
-            case OperationType.OP_ALTER_RESOURCE:{
+            case OperationType.OP_ALTER_RESOURCE: {
                 data = Resource.read(in);
                 isRead = true;
                 break;
@@ -642,6 +644,24 @@ public class JournalEntity implements Writable {
                 isRead = true;
                 break;
             }
+            case OperationType.OP_CREATE_POLICY: {
+                data = Policy.read(in);
+                isRead = true;
+                break;
+            }
+            case OperationType.OP_DROP_POLICY: {
+                data = DropPolicyLog.read(in);
+                isRead = true;
+                break;
+            }
+            case OperationType.OP_CREATE_DS:
+            case OperationType.OP_DROP_DS:
+            case OperationType.OP_ALTER_DS_NAME:
+            case OperationType.OP_ALTER_DS_PROPS: {
+                data = CatalogLog.read(in);
+                isRead = true;
+                break;
+            }
             default: {
                 IOException e = new IOException();
                 LOG.error("UNKNOWN Operation Type {}", opCode, e);
@@ -651,4 +671,3 @@ public class JournalEntity implements Writable {
         Preconditions.checkState(isRead);
     }
 }
-

@@ -18,8 +18,7 @@
 // https://github.com/apache/impala/blob/branch-2.9.0/be/src/exec/exec-node.h
 // and modified by Doris
 
-#ifndef DORIS_BE_SRC_QUERY_EXEC_EXEC_NODE_H
-#define DORIS_BE_SRC_QUERY_EXEC_EXEC_NODE_H
+#pragma once
 
 #include <mutex>
 #include <sstream>
@@ -29,13 +28,10 @@
 #include "gen_cpp/PlanNodes_types.h"
 #include "runtime/bufferpool/buffer_pool.h"
 #include "runtime/descriptors.h"
-#include "runtime/mem_pool.h"
 #include "runtime/query_statistics.h"
-#include "runtime/thread_context.h"
 #include "service/backend_options.h"
 #include "util/blocking_queue.hpp"
 #include "util/runtime_profile.h"
-#include "util/uid_util.h" // for print_id
 #include "vec/exprs/vexpr_context.h"
 
 namespace doris {
@@ -374,5 +370,3 @@ private:
 };
 
 } // namespace doris
-
-#endif
